@@ -26,8 +26,8 @@ void Test() {
         assert(s2.HasPrev());
         assert(s1.HasNext());
 
-        assert(s1.next() == s2);
-        assert(s2.prev() == s1);
+        assert(s1.Next() == s2);
+        assert(s2.Prev() == s1);
 
         {
             Something s3{3};
@@ -42,10 +42,10 @@ void Test() {
             assert(s3.HasPrev());
             assert(s3.HasNext());
 
-            assert(s1.next() == s3);
-            assert(s2.prev() == s3);
-            assert(s3.prev() == s1);
-            assert(s3.next() == s2);
+            assert(s1.Next() == s3);
+            assert(s2.Prev() == s3);
+            assert(s3.Prev() == s1);
+            assert(s3.Next() == s2);
 
             {
                 Something s4{4};
@@ -56,24 +56,24 @@ void Test() {
                 assert(!s4.HasPrev());
                 assert(s4.HasNext());
 
-                assert(s4.next() == s1);
-                assert(s1.prev() == s4);
-                assert(s1.next() == s3);
-                assert(s2.prev() == s3);
-                assert(s3.prev() == s1);
-                assert(s3.next() == s2);
+                assert(s4.Next() == s1);
+                assert(s1.Prev() == s4);
+                assert(s1.Next() == s3);
+                assert(s2.Prev() == s3);
+                assert(s3.Prev() == s1);
+                assert(s3.Next() == s2);
 
             } // here s4 is destructed and automatically unlinked
 
-            assert(s1.next() == s3);
-            assert(s2.prev() == s3);
-            assert(s3.prev() == s1);
-            assert(s3.next() == s2);
+            assert(s1.Next() == s3);
+            assert(s2.Prev() == s3);
+            assert(s3.Prev() == s1);
+            assert(s3.Next() == s2);
 
         } // here s3 is destructed and automatically unlinked
 
-        assert(s1.next() == s2);
-        assert(s2.prev() == s1);
+        assert(s1.Next() == s2);
+        assert(s2.Prev() == s1);
 
     } // here s2 is destructed and automatically unlinked
 

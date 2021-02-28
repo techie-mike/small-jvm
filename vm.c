@@ -30,7 +30,6 @@ void MoveSP(int i) {
 #define FRAME_SIZE 10
 
 #define LOG_ON
-#define ASM
 
 // Programm counter
 uint8_t pc = 0;

@@ -78,7 +78,7 @@ class DlElt {
         prev_ = elt.prev_;
         if (prev_ != nullptr) { prev_->next_ = this; }
         elt.prev_ = this;
-        next_ = elt;
+        next_ = &elt;
     }
 
 
