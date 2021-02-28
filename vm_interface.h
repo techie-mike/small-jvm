@@ -3,13 +3,14 @@
 #define VM_INTERFACE_H
 
 #include <stdint.h>
+#include <assert.h>
 
 #define CONST_PULL_SIZE 8
-extern uint8_t const_pull[CONST_PULL_SIZE]; 
+extern uint64_t const_pull[CONST_PULL_SIZE]; 
 
 #define STACK_SIZE 255
 // Programm stack
-extern uint8_t stack[STACK_SIZE];
+extern uint64_t stack[STACK_SIZE];
 
 // Initialize stack and memory of VM
 void Init();

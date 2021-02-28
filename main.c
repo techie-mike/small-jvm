@@ -8,9 +8,10 @@
 #include "test.h"
 
 void vTask() {
-    printf(" Task created\n");
+    printf(" Task created\n\r");
     while (1) {
         RunTest(ONE_TEST, iconst_0);
+        RunTest(ONE_TEST, iand);
 #ifndef NO_FREERTOS
         vTaskDelay(2000 / portTICK_RATE_MS);
 #endif
@@ -24,7 +25,7 @@ int main()
     // Get char - to do not start programm immediatly 
     //getchar();
 
-    puts("Interpreter executed\n");
+    puts("Interpreter executed\n\r");
 
     // Call default test case
     getchar();

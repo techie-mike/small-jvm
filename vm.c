@@ -4,8 +4,8 @@
 
 #include "opcodes.h"
 
-uint8_t const_pull[CONST_PULL_SIZE]; 
-uint8_t stack[STACK_SIZE] = {};
+uint64_t const_pull[CONST_PULL_SIZE]; 
+uint64_t stack[STACK_SIZE] = {};
 
 uint64_t sp;
 
@@ -35,10 +35,10 @@ uint8_t fp = 0;
 void Init() {
     // 1. Clean intruction stack
     sp = 0;
-    memset(stack, 0, STACK_SIZE);
+    memset(stack, 0, STACK_SIZE * sizeof(stack[0]));
 
     // 2. TODO - fill const pull
-    memset(const_pull, 0, CONST_PULL_SIZE);
+    memset(const_pull, 0, CONST_PULL_SIZE * sizeof(const_pull[0]));
 
     // 3. Clean Frame
     // TODO - support dynamic frames 
@@ -62,12 +62,18 @@ void Execute(uint8_t* bc) {
                 // ... ->
                 // ..., <i>
 #ifdef ASM
-                uint8_t tmp_0;
-                uint64_t tmp_1;
+                // ASM CODE DIDN'T TEST, AFTER SWITCH ON "uint64_t"
+                uint64_t tmp_0 = 0;
+                uint64_t tmp_1 = 0;
+                uint64_t offset = 0;
                 asm ("addi %0, %1, 1" :"=r"(sp) :"r"(sp));
-                asm ("lb  %0, 0(%1)" :"=r"(tmp_0) :"r"((uint64_t)const_pull));
-                asm ("add %0, %1, %2" :"=r"(tmp_1) :"r"(sp), "r"((uint64_t)stack));
-                asm ("sb  %0, 0(%1)" :  :"r"(tmp_0), "r"(tmp_1));
+
+                asm ("ld  %0, 0(%1)" :"=r"(tmp_0) :"r"(const_pull));
+                
+                asm ("mul %0, %1, %2" : "=r"(offset) : "r"(sp), "r"(sizeof(stack[0])));
+                asm ("add %0, %1, %2" : "=r"(tmp_1)  : "r"(offset), "r"(stack));
+                asm ("sd  %0, 0(%1)"  :  : "r"(tmp_0), "r"(tmp_1));
+
 #else
                 // C-code:
                 ++sp;
@@ -75,6 +81,56 @@ void Execute(uint8_t* bc) {
 #endif
                 break;
             }
+
+			case(iand) : {
+				// Operand Stack:
+				// ..., value_1, value_2, ->
+				// ..., result
+
+
+#ifdef ASM
+                // TODO This command in ASM
+                uint64_t value_1 = 0, value_2 = 0, result = 0;
+                uint64_t offset = 0;
+
+                // Load value_1
+                asm ("mul %0, %1, %2" : "=r"(offset) : "r"(sp), "r"(sizeof(stack[0])));
+                asm ("add %0, %1, %2" : "=r"(value_1)  : "r"(offset), "r"(stack));
+
+                asm ("ld %0, 0(%1)" : "=r"(value_1): "r"(value_1));
+                
+                asm ("li %0, 1" : "=r"(offset));
+                asm ("sub %0, %1, %2" :"=r"(sp) :"r"(sp), "r"(offset));
+
+                // Load value_2
+                asm ("mul %0, %1, %2" : "=r"(offset) : "r"(sp), "r"(sizeof(stack[0])));
+                asm ("add %0, %1, %2" : "=r"(value_2)  : "r"(offset), "r"(stack));
+
+                asm ("ld %0, 0(%1)" : "=r"(value_2): "r"(value_2));
+
+                asm ("and %0, %1, %2" : "=r"(result) : "r"(value_1), "r"(value_2));
+
+                // Write result
+                asm ("mul %0, %1, %2" : "=r"(offset) : "r"(sp), "r"(sizeof(stack[0])));
+                asm ("add %0, %1, %2" : "=r"(offset)  : "r"(offset), "r"(stack));
+
+                asm ("sd  %0, 0(%1)"  :  : "r"(result), "r"(offset));
+
+#else	
+				// C-code:
+                uint64_t value_1 = 0, value_2 = 0, result = 0;
+                
+                // "stack" type is "unit64_t"
+                value_1 = (uint64_t) stack[sp - 1];
+                value_2 = (uint64_t) stack[sp];
+                result = value_1 & value_2;
+                sp -= 1;
+                stack[sp] = result;
+
+
+#endif
+
+			}
             case(return_) : {
                 // TODO support frame removing and return from methods
                 if (fp == 0) {
@@ -87,7 +143,7 @@ void Execute(uint8_t* bc) {
             }
             default:
 #ifdef LOG_ON
-                printf("Unsupported instruction with bc = %d at pc = %d \n", opcode, pc);
+                printf("Unsupported instruction with bc = %d at pc = %d \n\r", opcode, pc);
 #endif
                 break;
         }
