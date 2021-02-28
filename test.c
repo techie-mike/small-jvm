@@ -11,6 +11,8 @@ extern uint64_t sp; // We should have access this variable for tests
 
 int const TEST_COUNT = OPCODE_NUM;
 
+void Test_iconst_i(uint8_t bytecodes[2], uint8_t i);
+
 // Execution type and number of iterations (or test ID)
 void RunTest(ExecType type, int it) {
     switch (type) {
@@ -53,31 +55,44 @@ void Test(int id) {
     srand(t);
 
     switch(id) {
-        case(iconst_0) : {
+	    
+        case(iconst_0) : {			 
             uint8_t bytecodes[2] = {iconst_0, return_};
-           
-            // Initialize VM
-            Init();
-            uint64_t prev_sp = GetSP();
-            // Fill zero const pull by random value
-            uint8_t rand_value = (rand());
-            const_pull[0] = rand_value;
-#ifdef LOG_ON
-            printf("Enter to iconst_0 test\n\r");
-            printf("  rand = %d\n\r", rand_value);
-            printf("  sp = %ld\n\r", prev_sp);
-#endif
+            Test_iconst_i(bytecodes, 0u);
+            break; 
+        }
+	    
+        case(iconst_1) : {			 
+            uint8_t bytecodes[2] = {iconst_1, return_};
+            Test_iconst_i(bytecodes, 1u);
+            break; 
+        }
 
-            // Execute bc
-            Execute(bytecodes);
-#ifdef LOG_ON
-            printf("Exit from execution iconst_0 test\n\r");
-            printf("  stack[sp] = %ld\n\r", stack[GetSP()]);
-            printf("  sp = %ld\n\r", GetSP());
-#endif
-            assert(GetSP() == prev_sp + 1);
-            assert(stack[GetSP()] == rand_value);
-            // Create bytecode:
+	    
+        case(iconst_2) : {			 
+            uint8_t bytecodes[2] = {iconst_2, return_};
+            Test_iconst_i(bytecodes, 2u);
+            break; 
+        }
+
+	    
+        case(iconst_3) : {			 
+            uint8_t bytecodes[2] = {iconst_3, return_};
+            Test_iconst_i(bytecodes, 3u);
+            break; 
+        }
+
+	    
+        case(iconst_4) : {			 
+            uint8_t bytecodes[2] = {iconst_4, return_};
+            Test_iconst_i(bytecodes, 4u);
+            break; 
+        }
+
+	    
+        case(iconst_5) : {			 
+            uint8_t bytecodes[2] = {iconst_5, return_};
+            Test_iconst_i(bytecodes, 5u);
             break; 
         }
 
@@ -132,6 +147,8 @@ void Test(int id) {
             printf("Enter to iadd test\r\n");
             printf("  rv1 = %u,  rv2 = %u\r\n", rv1, rv2);
             printf("  sp = %lu\r\n", prev_sp);
+
+            printf("  Should result = %ld\n\r", rv1 + rv2);
 #endif
 
             // Execute bc
@@ -156,5 +173,27 @@ void Test(int id) {
 }
 
 
+void Test_iconst_i(uint8_t bytecodes[2], uint8_t i) {
+    // Initialize VM
+    Init();
+    uint64_t prev_sp = GetSP();
+    // Fill zero const pull by random value
+    uint8_t rand_value = (rand());
+    const_pull[i] = rand_value;
+#ifdef LOG_ON
+    printf("Enter to iconst_%u test\n\r", i);
+    printf("  rand = %d\n\r", rand_value);
+    printf("  sp = %ld\n\r", prev_sp);
+#endif
 
+    // Execute bc
+    Execute(bytecodes);
+#ifdef LOG_ON
+    printf("Exit from execution iconst_%u test\n\r", i);
+    printf("  stack[sp] = %ld\n\r", stack[GetSP()]);
+    printf("  sp = %ld\n\r", GetSP());
+#endif
+    assert(GetSP() == prev_sp + 1);
+    assert(stack[GetSP()] == rand_value);
+}	
 

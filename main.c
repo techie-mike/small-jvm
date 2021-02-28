@@ -11,11 +11,17 @@ void vTask() {
     printf(" Task created\n\r");
     while (1) {
         RunTest(ONE_TEST, iconst_0);
+        RunTest(ONE_TEST, iconst_1);
+        RunTest(ONE_TEST, iconst_2);
+        RunTest(ONE_TEST, iconst_3);
+        RunTest(ONE_TEST, iconst_4);
+        RunTest(ONE_TEST, iconst_5);
         RunTest(ONE_TEST, iand);
         RunTest(ONE_TEST, iadd);
 #ifndef NO_FREERTOS
         vTaskDelay(2000 / portTICK_RATE_MS);
 #endif
+
     }
 }
 
