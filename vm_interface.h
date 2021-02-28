@@ -21,4 +21,7 @@ void Execute(uint8_t* bc);
 // Special getter for stack_pointer position
 uint64_t GetSP();
 
+// For replacing stack point explicitly (for tests)
+void MoveSP(int i);
+
 #endif // VM_INTERFACE_H

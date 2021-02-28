@@ -12,6 +12,7 @@ void vTask() {
     while (1) {
         RunTest(ONE_TEST, iconst_0);
         RunTest(ONE_TEST, iand);
+        RunTest(ONE_TEST, iadd);
 #ifndef NO_FREERTOS
         vTaskDelay(2000 / portTICK_RATE_MS);
 #endif

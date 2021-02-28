@@ -13,6 +13,17 @@ uint64_t GetSP() {
     return sp;
 }
 
+void MoveSP(int i) {
+    if(i >= 0) {
+	sp += (uint64_t) i;
+    }
+    else {
+	i = -i;
+	assert(sp >= (uint64_t) i);
+	sp -= (uint64_t) i;
+    }
+}
+
 // TODO - dynamic frame
 #define FRAME_SIZE 10
 
@@ -131,6 +142,24 @@ void Execute(uint8_t* bc) {
 #endif
 
 			}
+	    case(iadd) : {
+#ifdef ASM
+		uint64_t a1, a2;
+		uint64_t p1, p2;
+		asm ("add %0, %1, %2" :"=r"(p2) :"r"(sp * 8), "r"((uint64_t)stack));
+		asm ("lw  %0, 0(%1)" :"=r"(a2) :"r"(p2));
+		asm ("addi %0, %1, -1" :"=r"(sp) :"r"(sp));
+		asm ("add %0, %1, %2" :"=r"(p1) :"r"(sp * 8), "r"((uint64_t)stack));
+		asm ("lw  %0, 0(%1)" :"=r"(a1) :"r"(p1));
+		asm ("addw %0, %1, %2" :"=r"(a1) :"r"(a1), "r"(a2));
+		asm ("sw %0, 0(%1)" :  :"r"(a1), "r"(p1));
+#else
+		--sp;
+		stack[sp] = (stack[sp] + stack[sp + 1]) % UINT32_MAX;
+#endif
+		break;
+	    }
+
             case(return_) : {
                 // TODO support frame removing and return from methods
                 if (fp == 0) {

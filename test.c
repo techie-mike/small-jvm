@@ -114,6 +114,38 @@ void Test(int id) {
             // Create bytecode:
             break;
         }
+        case(iadd) : {
+            uint8_t bytecodes[2] = {iadd, return_};
+           
+            // Initialize VM
+            Init();
+            uint64_t prev_sp = GetSP();
+	    uint32_t rv1, rv2;
+	    rv1 = rand() + rand();
+	    rv2 = rand() + rand();
+            stack[prev_sp] = rv1;
+	    MoveSP(1);
+	    prev_sp++;
+	    assert(prev_sp == GetSP());
+	    stack[prev_sp] = rv2; 
+#ifdef LOG_ON
+            printf("Enter to iadd test\r\n");
+            printf("  rv1 = %u,  rv2 = %u\r\n", rv1, rv2);
+            printf("  sp = %lu\r\n", prev_sp);
+#endif
+
+            // Execute bc
+            Execute(bytecodes);
+#ifdef LOG_ON
+            printf("Exit from execution iadd test\r\n");
+            printf("  stack[sp] = %lu\r\n", stack[GetSP()]);
+            printf("  sp = %lu\r\n", GetSP());
+#endif
+            assert(GetSP() == prev_sp - 1);
+            assert((uint32_t) stack[GetSP()] == rv1 + rv2);
+            // Create bytecode:
+            break; 
+        }
 
     default:
 #ifdef LOG_ON
