@@ -9,9 +9,9 @@ if (NOT DEFINED NO_ASM)
 endif ()
 
 set(SOURCE_LIST
-    main.c
-    test.c
-    vm.c
+    main.cpp
+    test.cpp
+    vm.cpp
 )
 
 add_subdirectory (mem)

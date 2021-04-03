@@ -1,13 +1,12 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <time.h>
+#include <cstdio>
+#include <cstdlib>
+#include <ctime>
 
-#include <assert.h>
+#include <cassert>
 #include "vm_interface.h"
 #include "opcodes.h"
 #include "test.h"
 
-extern uint64_t sp; // We should have access this variable for tests
 
 int const TEST_COUNT = OPCODE_NUM;
 
@@ -23,6 +22,7 @@ void RunTest(ExecType type, int it) {
 #endif
             break;
         }
+
         case (DEFAULT_SEQUENCE) : {
             for(int j = 0; j < it; ++j) {
                 for(int i = 0; i < TEST_COUNT; ++i) {
@@ -34,6 +34,7 @@ void RunTest(ExecType type, int it) {
 #endif
             break;
         }
+
         case (RANDOM_SEQUENCE) : {
             time_t t = time(NULL);
             srand(t);
@@ -55,111 +56,115 @@ void Test(int id) {
     srand(t);
 
     switch(id) {
-	    
-        case(iconst_0) : {			 
+        case(iconst_0) : {
             uint8_t bytecodes[2] = {iconst_0, return_};
             Test_iconst_i(bytecodes, 0u);
-            break; 
+            break;
         }
-	    
-        case(iconst_1) : {			 
+
+        case(iconst_1) : {
             uint8_t bytecodes[2] = {iconst_1, return_};
             Test_iconst_i(bytecodes, 1u);
-            break; 
+            break;
         }
 
-	    
-        case(iconst_2) : {			 
+        case(iconst_2) : {
             uint8_t bytecodes[2] = {iconst_2, return_};
             Test_iconst_i(bytecodes, 2u);
-            break; 
+            break;
         }
 
-	    
-        case(iconst_3) : {			 
+        case(iconst_3) : {
             uint8_t bytecodes[2] = {iconst_3, return_};
             Test_iconst_i(bytecodes, 3u);
-            break; 
+            break;
         }
 
-	    
-        case(iconst_4) : {			 
+        case(iconst_4) : {
             uint8_t bytecodes[2] = {iconst_4, return_};
             Test_iconst_i(bytecodes, 4u);
-            break; 
+            break;
         }
 
-	    
-        case(iconst_5) : {			 
+        case(iconst_5) : {
             uint8_t bytecodes[2] = {iconst_5, return_};
             Test_iconst_i(bytecodes, 5u);
-            break; 
+            break;
         }
 
         case (iand) : {
             uint8_t bytecodes[2] = {iand, return_};
-           
+
             // Initialize VM
-            Init();
+            JavaVM vm;
+
             // Fill zero const pull by random value
             uint64_t rand_value_1 = (rand());
             uint64_t rand_value_2 = (rand());
-            stack[++sp] = rand_value_1;
-            stack[++sp] = rand_value_2;
-            uint64_t prev_sp = GetSP();
+
+            vm.MoveSP(1);
+            vm.SetStackVal(vm.GetSP(), rand_value_1);
+            vm.MoveSP(1);
+            vm.SetStackVal(vm.GetSP(), rand_value_2);
+
+            uint64_t prev_sp = vm.GetSP();
 
 #ifdef LOG_ON
             printf("Enter to iand test\n\r");
             printf("  rand_1 = %ld\n\r", rand_value_1);
             printf("  rand_2 = %ld\n\r", rand_value_2);
-            printf("  sp = %ld\n\r", GetSP());
+            printf("  sp = %ld\n\r", vm.GetSP());
             printf("  Should result = %ld\n\r", rand_value_1 & rand_value_2);
 
 #endif
 
             // Execute bc
-            Execute(bytecodes);
+            vm.Execute(bytecodes);
 #ifdef LOG_ON
             printf("Exit from execution iand test\n\r");
-            printf("  stack[sp] = %ld\n\r", stack[GetSP()]);
-            printf("  sp = %ld\n\r", GetSP());
+            printf("  stack[sp] = %ld\n\r", vm.RetStackVal(vm.GetSP()));
+            printf("  sp = %ld\n\r", vm.GetSP());
 #endif
-            assert(GetSP() == prev_sp - 1);
-            assert(stack[GetSP()] == (rand_value_1 & rand_value_2));
+            assert(vm.GetSP() == prev_sp - 1);
+            assert(vm.RetStackVal(vm.GetSP()) == (rand_value_1 & rand_value_2));
             // Create bytecode:
             break;
         }
+
         case(iadd) : {
             uint8_t bytecodes[2] = {iadd, return_};
-           
             // Initialize VM
-            Init();
-            uint64_t prev_sp = GetSP();
-	    uint32_t rv1, rv2;
-	    rv1 = rand() + rand();
-	    rv2 = rand() + rand();
-            stack[prev_sp] = rv1;
-	    MoveSP(1);
-	    prev_sp++;
-	    assert(prev_sp == GetSP());
-	    stack[prev_sp] = rv2; 
+            JavaVM vm;
+
+            uint32_t rv1, rv2;
+            rv1 = rand() + rand();
+            rv2 = rand() + rand();
+
+	        vm.MoveSP(1);
+            vm.SetStackVal(vm.GetSP(), rv1);
+	        vm.MoveSP(1);
+            vm.SetStackVal(vm.GetSP(), rv2);
+
+            uint64_t prev_sp = vm.GetSP();
+
 #ifdef LOG_ON
             printf("Enter to iadd test\r\n");
             printf("  rv1 = %u,  rv2 = %u\r\n", rv1, rv2);
-            printf("  sp = %lu\r\n", prev_sp);
+            printf("  sp = %lu\r\n", vm.GetSP());
 
-            printf("  Should result = %ld\n\r", rv1 + rv2);
+            printf("  Should result = %ld\n\r", 
+                    static_cast<uint64_t>(rv1 + rv2));
 #endif
 
             // Execute bc
-            Execute(bytecodes);
+            vm.Execute(bytecodes);
 #ifdef LOG_ON
             printf("Exit from execution iadd test\r\n");
-            printf("  stack[sp] = %lu\r\n", stack[GetSP()]);
-            printf("  sp = %lu\r\n", GetSP());
+            printf("  stack[sp] = %lu\r\n", vm.RetStackVal(vm.GetSP()));
+            printf("  sp = %lu\r\n", vm.GetSP());
 #endif
-            assert(GetSP() == prev_sp - 1);
-            assert((uint32_t) stack[GetSP()] == rv1 + rv2);
+            assert(vm.GetSP() == prev_sp - 1);
+            assert((uint32_t) vm.RetStackVal(vm.GetSP()) == rv1 + rv2);
             // Create bytecode:
             break; 
         }
@@ -175,11 +180,12 @@ void Test(int id) {
 
 void Test_iconst_i(uint8_t bytecodes[2], uint8_t i) {
     // Initialize VM
-    Init();
-    uint64_t prev_sp = GetSP();
+    JavaVM vm;
+
+    uint64_t prev_sp = vm.GetSP();
     // Fill zero const pull by random value
     uint8_t rand_value = (rand());
-    const_pull[i] = rand_value;
+    vm.FillConstPull(i, rand_value);
 #ifdef LOG_ON
     printf("Enter to iconst_%u test\n\r", i);
     printf("  rand = %d\n\r", rand_value);
@@ -187,13 +193,12 @@ void Test_iconst_i(uint8_t bytecodes[2], uint8_t i) {
 #endif
 
     // Execute bc
-    Execute(bytecodes);
+    vm.Execute(bytecodes);
 #ifdef LOG_ON
     printf("Exit from execution iconst_%u test\n\r", i);
-    printf("  stack[sp] = %ld\n\r", stack[GetSP()]);
-    printf("  sp = %ld\n\r", GetSP());
+    printf("  stack[sp] = %ld\n\r", vm.RetStackVal(vm.GetSP()));
+    printf("  sp = %ld\n\r", vm.GetSP());
 #endif
-    assert(GetSP() == prev_sp + 1);
-    assert(stack[GetSP()] == rand_value);
-}	
-
+    assert(vm.GetSP() == prev_sp + 1);
+    assert(vm.RetStackVal(vm.GetSP()) == rand_value);
+}

@@ -16,8 +16,8 @@ TOOLCHAIN=''
 QEMU_PATH=''
 
 CLEAN='false'
-BUILD='false'
-EXECUTE='false'
+BUILD='true'
+EXECUTE='true'
 DEBUG='false'
 FREE_RTOS='false'
 
