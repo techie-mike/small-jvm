@@ -6,19 +6,22 @@
 
 
 JavaVM::JavaVM() {
-    // 1. Clean intruction stack
-    sp_ = 0;
-    memset(stack_, 0, STACK_SIZE * sizeof(stack_[0]));
-
-    // 2. TODO - fill const pull
+    // 1. TODO - fill const pull
     memset(const_pull_, 0, CONST_PULL_SIZE * sizeof(const_pull_[0]));
-
-    // 3. Clean Frame
     // TODO - support dynamic frames 
-    curr_frame_ = frame_;
 
-    // 4. Initialize pc
+    // 2. Initialize pc
     pc_ = 0;
+    CreateFirstFrame();
+}
+
+JavaVM::~JavaVM() {
+    DeleteFirstFrame();
+}
+
+void JavaVM::DeleteFirstFrame() {
+    delete frame_[fp_];
+    frame_[fp_] = nullptr;
 }
 
 void JavaVM::Execute(uint8_t* bc) {
@@ -28,68 +31,69 @@ void JavaVM::Execute(uint8_t* bc) {
         uint8_t opcode = bc[pc_];
 
         switch (opcode) {
-            case(iconst_0) : {
-                // Operand Stack:
-                // ... ->
-                // ..., <i>
-                Execute_iconst_i(0u);
-                break;
+            //------------------------------
+            #define ICONST_I(num)\
+            case(iconst_##num) : {\
+                Execute_iconst_i(num ## u);\
+                break;\
             }
 
-            case(iconst_1) : {
-                Execute_iconst_i(1u);
-                break;
-            }
+            ICONST_I(0)
+            ICONST_I(1)
+            ICONST_I(2)
+            ICONST_I(3)
+            ICONST_I(4)
+            ICONST_I(5)
 
-            case(iconst_2) : {
-                Execute_iconst_i(2u);
-                break;
-            }
-
-            case(iconst_3) : {
-                Execute_iconst_i(3u);
-                break;
-            }
-
-            case(iconst_4) : {
-                Execute_iconst_i(4u);
-                break;
-            }
-
-            case(iconst_5) : {
-                Execute_iconst_i(5u);
-                break;
-            }
+            #undef ICONST_I
+            //------------------------------
 
             case(iand) : {
                 Execute_iand();
 	            break;
             }
+
             case(iadd) : {
                 Execute_iadd();
+                break;
+            }
+
+            case(bipush) : {
+                Execute_bipush(bc);
                 break;
             }
 
             case(return_) : {
                 // TODO support frame removing and return from methods
                 if (fp_ == 0) {
-                return;
-                } else {
-                    assert(fp_ < FRAME_SIZE);
-                    --fp_;
+                    return;
                 }
                 break;
             }
 
-            default:
-#ifdef LOG_ON
-            printf("Unsupported instruction with bc = %d at pc = %d \n\r", opcode, pc_);
-#endif
-            break;
+            case(invokestatic) : {
+                Execute_invokestatic(bc);
+                break;
+            }
+
+            case(ireturn) : {
+                uint64_t ret = curr_frame_->operand_stack_[curr_frame_->sp_];
+                curr_frame_->sp_--;
+                frame_[fp_ - 1]->sp_++;
+                frame_[fp_ - 1]->operand_stack_[frame_[fp_ - 1]->sp_] = ret;
+                return;
+                break;
+            }
+
+            default: {
+                #ifdef LOG_ON
+                printf("Unsupported instruction with bc = %d at pc = %d \n\r", opcode, pc_);
+                #endif
+                break;
+            }
         }
         ++pc_;
     }
-    assert(sp_ == GetSP());
 }
 
 void JavaVM::Execute_iand() {
@@ -102,25 +106,25 @@ void JavaVM::Execute_iand() {
     uint64_t offset = 0;
 
     // Load value_1
-    asm ("mul %0, %1, %2" : "=r"(offset) : "r"(sp_), "r"(sizeof(stack_[0])));
-    asm ("add %0, %1, %2" : "=r"(value_1)  : "r"(offset), "r"(stack_));
+    asm ("mul %0, %1, %2" : "=r"(offset) : "r"(curr_frame_->sp_), "r"(sizeof(curr_frame_->operand_stack_[0])));
+    asm ("add %0, %1, %2" : "=r"(value_1)  : "r"(offset), "r"(curr_frame_->operand_stack_));
 
     asm ("ld %0, 0(%1)" : "=r"(value_1): "r"(value_1));
 
     asm ("li %0, 1" : "=r"(offset));
-    asm ("sub %0, %1, %2" :"=r"(sp_) :"r"(sp_), "r"(offset));
+    asm ("sub %0, %1, %2" :"=r"(curr_frame_->sp_) :"r"(curr_frame_->sp_), "r"(offset));
 
     // Load value_2
-    asm ("mul %0, %1, %2" : "=r"(offset) : "r"(sp_), "r"(sizeof(stack_[0])));
-    asm ("add %0, %1, %2" : "=r"(value_2)  : "r"(offset), "r"(stack_));
+    asm ("mul %0, %1, %2" : "=r"(offset) : "r"(curr_frame_->sp_), "r"(sizeof(curr_frame_->operand_stack_[0])));
+    asm ("add %0, %1, %2" : "=r"(value_2)  : "r"(offset), "r"(curr_frame_->operand_stack_));
 
     asm ("ld %0, 0(%1)" : "=r"(value_2): "r"(value_2));
 
     asm ("and %0, %1, %2" : "=r"(result) : "r"(value_1), "r"(value_2));
 
     // Write result
-    asm ("mul %0, %1, %2" : "=r"(offset) : "r"(sp_), "r"(sizeof(stack_[0])));
-    asm ("add %0, %1, %2" : "=r"(offset)  : "r"(offset), "r"(stack_));
+    asm ("mul %0, %1, %2" : "=r"(offset) : "r"(curr_frame_->sp_), "r"(sizeof(curr_frame_->operand_stack_[0])));
+    asm ("add %0, %1, %2" : "=r"(offset)  : "r"(offset), "r"(curr_frame_->operand_stack_));
 
     asm ("sd  %0, 0(%1)"  :  : "r"(result), "r"(offset));
 
@@ -129,11 +133,12 @@ void JavaVM::Execute_iand() {
     uint64_t value_1 = 0, value_2 = 0, result = 0;
 
     // "stack" type is "unit64_t"
-    value_1 = (uint64_t) stack_[sp_ - 1];
-    value_2 = (uint64_t) stack_[sp_];
+    value_1 = (uint64_t) curr_frame_->operand_stack_[curr_frame_->sp_ - 1];
+    value_2 = (uint64_t) curr_frame_->operand_stack_[curr_frame_->sp_];
     result = value_1 & value_2;
-    sp_ -= 1;
-    stack_[sp_] = result;
+
+    curr_frame_->sp_ -= 1;
+    curr_frame_->operand_stack_[curr_frame_->sp_] = result;
 
 #endif
 }
@@ -145,20 +150,20 @@ void JavaVM::Execute_iconst_i(uint8_t i) {
   uint64_t tmp_1 = 0;
   uint64_t offset = 0;
 
-  asm ("addi %0, %1, 1" : "=r"(sp_) :"r"(sp_));
+  asm ("addi %0, %1, 1" : "=r"(curr_frame_->sp_) :"r"(curr_frame_->sp_));
   asm ("mul %0, %1, %2" : "=r"(i) : "r"(i), "r"(sizeof(const_pull_[0])));
   asm ("add %0, %1, %2" : "=r"(tmp_0) :"r"(const_pull_), "r"(i));
 
   asm ("ld  %0, 0(%1)" : "=r"(tmp_0) : "r"(tmp_0));
 
-  asm ("mul %0, %1, %2" : "=r"(offset) : "r"(sp_), "r"(sizeof(stack_[0])));
-  asm ("add %0, %1, %2" : "=r"(tmp_1)  : "r"(offset), "r"(stack_));
+  asm ("mul %0, %1, %2" : "=r"(offset) : "r"(curr_frame_->sp_), "r"(sizeof(curr_frame_->operand_stack_[0])));
+  asm ("add %0, %1, %2" : "=r"(tmp_1)  : "r"(offset), "r"(curr_frame_->operand_stack_));
   asm ("sd  %0, 0(%1)"  :  : "r"(tmp_0), "r"(tmp_1));
 
 #else
   // C-code:
-  ++sp_;
-  stack_[sp_] = const_pull_[i];
+  curr_frame_->sp_++;
+  curr_frame_->operand_stack_[curr_frame_->sp_] = reinterpret_cast<uint64_t> (const_pull_[i]);
 #endif
 }
 
@@ -166,32 +171,77 @@ void JavaVM::Execute_iadd() {
 #ifdef ASM
     uint64_t a1, a2;
     uint64_t p1, p2;
-    asm ("add %0, %1, %2" :"=r"(p2) :"r"(sp_ * 8), "r"((uint64_t)stack_));
+    asm ("add %0, %1, %2" :"=r"(p2) :"r"(curr_frame_->sp_ * 8), "r"((uint64_t)curr_frame_->operand_stack_));
     asm ("lw  %0, 0(%1)" :"=r"(a2) :"r"(p2));
-    asm ("addi %0, %1, -1" :"=r"(sp_) :"r"(sp_));
-    asm ("add %0, %1, %2" :"=r"(p1) :"r"(sp_ * 8), "r"((uint64_t)stack_));
+    asm ("addi %0, %1, -1" :"=r"(curr_frame_->sp_) :"r"(curr_frame_->sp_));
+    asm ("add %0, %1, %2" :"=r"(p1) :"r"(curr_frame_->sp_ * 8), "r"((uint64_t)curr_frame_->operand_stack_));
     asm ("lw  %0, 0(%1)" :"=r"(a1) :"r"(p1));
     asm ("addw %0, %1, %2" :"=r"(a1) :"r"(a1), "r"(a2));
     asm ("sw %0, 0(%1)" :  :"r"(a1), "r"(p1));
 #else
-    --sp_;
-    stack_[sp_] = (stack_[sp_] + stack_[sp_ + 1]) % UINT32_MAX;
+    curr_frame_->sp_--;
+    curr_frame_->operand_stack_[curr_frame_->sp_] = 
+        (curr_frame_->operand_stack_[curr_frame_->sp_] 
+        + curr_frame_->operand_stack_[curr_frame_->sp_ + 1]) % UINT32_MAX;
 #endif
 
 }
 
+void JavaVM::Execute_invokestatic(uint8_t* bc) {
+    uint32_t index_function = (bc[pc_ + 1] << 8) | bc[pc_ + 2];
+    bc += 2;
+
+    MethodInfo* info = reinterpret_cast<MethodInfo*>(const_pull_[index_function]);    
+    if (info->code_info_.code_ == nullptr) {
+        printf ("Info don't have code\n\t");
+        throw;
+    }
+
+    CreateFrame(info);
+    Execute(info->code_info_.code_);
+    DeleteFrame();
+}
+
+void JavaVM::Execute_bipush(uint8_t* bc) {
+    uint8_t byte = bc[++pc_];
+    curr_frame_->sp_++;
+    curr_frame_->operand_stack_[curr_frame_->sp_] = byte;
+}
+
+void JavaVM::CreateFrame(MethodInfo* info) {
+    fp_++;
+    Frame* new_frame = new Frame;
+    frame_[fp_] = new_frame;
+    new_frame->CreateStackAndLocalVars(info->code_info_.max_stack_,
+                                       info->code_info_.max_locals_);
+    curr_frame_ = new_frame;
+}
+
+void JavaVM::DeleteFrame() {
+    delete curr_frame_;
+    fp_--;
+    curr_frame_ = frame_[fp_];
+}
+
+void JavaVM::CreateFirstFrame() {
+    curr_frame_ = new Frame;
+    frame_[fp_] = curr_frame_; 
+    curr_frame_->CreateStackAndLocalVars(STACK_SIZE, LOCAL_SIZE);
+}
+
+
 uint64_t JavaVM::GetSP() {
-    return sp_;
+    return curr_frame_->sp_;
 }
 
 void JavaVM::MoveSP(int i) {
     if (i >= 0) {
-        sp_ += static_cast<uint64_t>(i);
+        curr_frame_->sp_ += static_cast<uint64_t>(i);
     }
     else {
         i = -i;
-        assert(sp_ > static_cast<uint64_t>(i));
-        sp_ -= static_cast<uint64_t>(i);
+        assert(curr_frame_->sp_ > static_cast<uint64_t>(i));
+        curr_frame_->sp_ -= static_cast<uint64_t>(i);
     }
 }
 
@@ -199,15 +249,78 @@ int JavaVM::FillConstPull(uint8_t num_pull, uint64_t value) {
     if (num_pull >= CONST_PULL_SIZE)
         return -1;
     else {
-        const_pull_[num_pull] = value;
+        const_pull_[num_pull] = reinterpret_cast<uint64_t*> (value);
+        return 0;
     }
 }
 
 uint64_t JavaVM::RetStackVal(uint64_t pos) {
-    assert(pos <= sp_);
-    return stack_[pos];
+    assert(pos <= curr_frame_->sp_);
+    return curr_frame_->operand_stack_[pos];
 }
 
 void JavaVM::SetStackVal(uint64_t pos, uint64_t val) {
-    stack_[pos] = val;
+    curr_frame_->operand_stack_[pos] = val;
+}
+
+JavaVM::MethodInfo::CodeAttribute::CodeAttribute() :
+    max_stack_(0),
+    max_locals_(0),
+    code_length_(0),
+    code_(nullptr) {}; 
+
+JavaVM::MethodInfo::CodeAttribute::~CodeAttribute() {
+    delete [] code_;
+};
+
+void JavaVM::MethodInfo::CodeAttribute::UploadCode(
+        uint32_t size, uint8_t* code) {
+    if (size > code_length_) {
+        printf ("Error, size of code more than code_length!\n");
+        throw;
+    }
+    code_ = new uint8_t [size];
+    memcpy (code_, code, size);
+}
+
+JavaVM::Frame::Frame() :
+    size_operand_stack_ (0),
+    operand_stack_ (nullptr),
+    return_value_ (0),
+    size_local_variable_ (0),
+    local_variable_ (nullptr),
+    sp_ (0) {};
+
+JavaVM::Frame::Frame(uint16_t size_stack,
+                     uint16_t size_locals) :
+        size_operand_stack_(size_stack),
+        size_local_variable_(size_locals)
+{
+    operand_stack_  = new uint64_t [size_operand_stack_];
+    local_variable_ = new uint8_t [size_local_variable_];
+};
+
+JavaVM::Frame::~Frame() {
+    delete [] operand_stack_;
+    delete [] local_variable_;
+}
+
+void JavaVM::Frame::CreateStackAndLocalVars(uint16_t size_stack,
+                                            uint16_t size_locals) {
+    if (operand_stack_ || local_variable_)
+        throw;
+
+    size_operand_stack_ = size_stack;
+    size_local_variable_= size_locals;
+
+    operand_stack_  = new uint64_t [size_operand_stack_];
+    local_variable_ = new uint8_t [size_local_variable_];
+}
+
+void JavaVM::MethodInfo::CodeAttribute::SetValues(uint16_t max_stack,
+                                                  uint16_t max_locals,
+                                                  uint32_t code_length) {
+    max_stack_   = max_stack;
+    max_locals_  = max_locals;
+    code_length_ = code_length;
 }

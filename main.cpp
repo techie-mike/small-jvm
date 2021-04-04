@@ -18,6 +18,8 @@ void vTask() {
         RunTest(ONE_TEST, iconst_5);
         RunTest(ONE_TEST, iand);
         RunTest(ONE_TEST, iadd);
+        RunTest(ONE_TEST, invokestatic);
+
 #ifndef NO_FREERTOS
         vTaskDelay(2000 / portTICK_RATE_MS);
 #endif

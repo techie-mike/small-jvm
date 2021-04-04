@@ -16,6 +16,7 @@ set(SOURCE_LIST
 
 add_subdirectory (mem)
 
+add_compile_options(-Wall -Wextra)
 
 add_executable(tiny_vm ${SOURCE_LIST})
 
